@@ -15,8 +15,11 @@
 
 import os
 import pathlib
+import shutil
 import subprocess
+import tempfile
 
+import torch
 from torch.utils import cpp_extension
 
 
@@ -44,54 +47,109 @@ def load(args):
 
     # Build path
     srcpath = pathlib.Path(__file__).parent.absolute()
-    buildpath = srcpath / 'build'
-    buildpath.mkdir(parents=True, exist_ok=True)
+    prev_buildpath = srcpath / 'build'
+    prev_buildpath.mkdir(parents=True, exist_ok=True)
 
-    # Helper function to build the kernels.
-    def _cpp_extention_load_helper(name, sources, extra_cuda_flags):
-        return cpp_extension.load(
-            name=name,
-            sources=sources,
-            build_directory=buildpath,
-            extra_cflags=['-O3',],
-            extra_cuda_cflags=['-O3',
-                               '--use_fast_math'] + extra_cuda_flags,
-            verbose=(args.rank == 0)
-        )
-                               # '-gencode', 'arch=compute_70,code=sm_70',
+    with tempfile.TemporaryDirectory() as buildpath:
+        # Helper function to build the kernels.
+        def _cpp_extention_load_helper(name, sources, extra_cuda_flags):
+            # Copy previous build files to temporary directory.
+            object_names = []
+            for source in sources:
+                source_name = source.stem
+                source_extension = source.suffix
+                if source_extension == '.cu':
+                    object_name = \
+                        source_name + '.cuda.o'
+                else:
+                    object_name = source_name + '.o'
 
-    # ==============
-    # Fused softmax.
-    # ==============
+                object_names.append(object_name)
 
-    if args.masked_softmax_fusion:
-        extra_cuda_flags = ['-U__CUDA_NO_HALF_OPERATORS__',
-                            '-U__CUDA_NO_HALF_CONVERSIONS__',
-                            '--expt-relaxed-constexpr',
-                            '--expt-extended-lambda']
-        
-        # Upper triangular softmax.
-        sources=[srcpath / 'scaled_upper_triang_masked_softmax.cpp',
-                 srcpath / 'scaled_upper_triang_masked_softmax_cuda.cu']
-        scaled_upper_triang_masked_softmax_cuda = _cpp_extention_load_helper(
-            "scaled_upper_triang_masked_softmax_cuda",
-            sources, extra_cuda_flags)
+            shared_object_name = name + '.so'
+            object_names.append(shared_object_name)
 
-        # Masked softmax.
-        sources=[srcpath / 'scaled_masked_softmax.cpp',
-                 srcpath / 'scaled_masked_softmax_cuda.cu']
-        scaled_masked_softmax_cuda = _cpp_extention_load_helper(
-            "scaled_masked_softmax_cuda", sources, extra_cuda_flags)
+            # TODO We could also check for file size or something to
+            #      make it a bit safer.
+            has_prev_build_files = (
+                prev_buildpath.is_dir()
+                and all(
+                    (prev_buildpath / object_name).is_file()
+                    for object_name in object_names
+                )
+            )
 
-    # =================================
-    # Mixed precision fused layer norm.
-    # =================================
+            if has_prev_build_files:
+                # `object_name` may also be a shared object.
+                for object_name in object_names:
+                    shutil.copy2(
+                        prev_buildpath / object_name,
+                        buildpath,
+                    )
 
-    extra_cuda_flags = ['-maxrregcount=50']
-    sources=[srcpath / 'layer_norm_cuda.cpp',
-             srcpath / 'layer_norm_cuda_kernel.cu']
-    fused_mix_prec_layer_norm_cuda = _cpp_extention_load_helper(
-        "fused_mix_prec_layer_norm_cuda", sources, extra_cuda_flags)
+            # TODO For some reason, the copied files are ignored and we
+            #      still build every time.
+            ext = cpp_extension.load(
+                name=name,
+                sources=sources,
+                build_directory=buildpath,
+                extra_cflags=['-O3',],
+                extra_cuda_cflags=['-O3',
+                                   '--use_fast_math'] + extra_cuda_flags,
+                verbose=(args.rank == 0)
+            )
+                                   # '-gencode', 'arch=compute_70,code=sm_70',
+
+            # Avoid redundant work.
+            if (
+                    not has_prev_build_files
+                    and (
+                        not torch.distributed.is_initialized()
+                        or torch.distributed.get_rank() == 0
+                    )
+            ):
+                # Copy build files to cache directory.
+                # `object_name` may also be a shared object.
+                for object_name in object_names:
+                    shutil.copy2(
+                        os.path.join(buildpath, object_name),
+                        prev_buildpath,
+                    )
+
+            return ext
+
+        # ==============
+        # Fused softmax.
+        # ==============
+
+        if args.masked_softmax_fusion:
+            extra_cuda_flags = ['-U__CUDA_NO_HALF_OPERATORS__',
+                                '-U__CUDA_NO_HALF_CONVERSIONS__',
+                                '--expt-relaxed-constexpr',
+                                '--expt-extended-lambda']
+
+            # Upper triangular softmax.
+            sources=[srcpath / 'scaled_upper_triang_masked_softmax.cpp',
+                     srcpath / 'scaled_upper_triang_masked_softmax_cuda.cu']
+            scaled_upper_triang_masked_softmax_cuda = _cpp_extention_load_helper(
+                "scaled_upper_triang_masked_softmax_cuda",
+                sources, extra_cuda_flags)
+
+            # Masked softmax.
+            sources=[srcpath / 'scaled_masked_softmax.cpp',
+                     srcpath / 'scaled_masked_softmax_cuda.cu']
+            scaled_masked_softmax_cuda = _cpp_extention_load_helper(
+                "scaled_masked_softmax_cuda", sources, extra_cuda_flags)
+
+        # =================================
+        # Mixed precision fused layer norm.
+        # =================================
+
+        extra_cuda_flags = ['-maxrregcount=50']
+        sources=[srcpath / 'layer_norm_cuda.cpp',
+                 srcpath / 'layer_norm_cuda_kernel.cu']
+        fused_mix_prec_layer_norm_cuda = _cpp_extention_load_helper(
+            "fused_mix_prec_layer_norm_cuda", sources, extra_cuda_flags)
 
 
 def _get_cuda_bare_metal_version(cuda_dir):
