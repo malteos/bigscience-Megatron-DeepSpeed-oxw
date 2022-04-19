@@ -53,6 +53,7 @@ def parse_args(extra_args_provider=None, defaults={},
     parser = _add_zero_args(parser)
     parser = _add_memoryopt_args(parser)
     parser = _add_activation_checkpoint_args(parser)
+    parser = _add_oxw_args(parser)
 
     # Custom arguments.
     if extra_args_provider is not None:
@@ -1064,4 +1065,12 @@ def _add_activation_checkpoint_args(parser):
                        help='does a synchronize at the beginning and end of each checkpointed layer.')
     group.add_argument('--profile-backward', action='store_true',
                        help='Enables backward pass profiling for checkpointed layers.')
+    return parser
+
+
+def _add_oxw_args(parser):
+    group = parser.add_argument_group('oxw',
+                                      'Custom oxw Configurations (load from pretrained hf, ...')
+    group.add_argument('--from-pretrained-hf', type=str, default=None,
+                       help='Path to pretrained Huggingface model.')
     return parser
