@@ -5,57 +5,61 @@ from transformers.models.gpt2 import GPT2Model, GPT2Config, GPT2LMHeadModel
 
 from megatron import print_rank_0
 
+MODULE_PREFIX = None
+# MODULE_PREFIX = r'module\.'
+
+
 HF_STATE_DICT_MAPPINGS = {
-    'module.tied_modules.embed.word_embeddings.weight': {
+    r'tied_modules\.embed\.word_embeddings\.weight': {
         'hf_k': 'transformer.wte.weight',
         'vocab_offset': True,
     },
-    'module.tied_modules.embed.position_embeddings.weight': {
+    r'tied_modules\.embed\.position_embeddings\.weight': {
         'hf_k': 'transformer.wpe.weight',
     },
-    r'module\.([0-9]+)\.input_layernorm\.weight': {
+    r'([0-9]+)\.input_layernorm\.weight': {
         'hf_k': 'transformer.h.<LAYER>.ln_1.weight'
     },
-    r'module\.([0-9]+)\.input_layernorm\.bias': {
+    r'([0-9]+)\.input_layernorm\.bias': {
         'hf_k': 'transformer.h.<LAYER>.ln_1.bias'
     },
-    r'module\.([0-9]+)\.self_attention\.query_key_value\.weight': {
+    r'([0-9]+)\.self_attention\.query_key_value\.weight': {
         'hf_k': 'transformer.h.<LAYER>.attn.c_attn.weight',
         'transpose': True,
     },
-    r'module\.([0-9]+)\.self_attention\.query_key_value\.bias': {
+    r'([0-9]+)\.self_attention\.query_key_value\.bias': {
         'hf_k': 'transformer.h.<LAYER>.attn.c_attn.bias',
     },
-    r'module\.([0-9]+)\.self_attention\.dense\.weight': {
+    r'([0-9]+)\.self_attention\.dense\.weight': {
         'hf_k': 'transformer.h.<LAYER>.attn.c_proj.weight',
     },
-    r'module\.([0-9]+)\.self_attention\.dense\.bias': {
+    r'([0-9]+)\.self_attention\.dense\.bias': {
         'hf_k': 'transformer.h.<LAYER>.attn.c_proj.bias',
     },
-    r'module\.([0-9]+)\.post_attention_layernorm\.weight': {
+    r'([0-9]+)\.post_attention_layernorm\.weight': {
         'hf_k': 'transformer.h.<LAYER>.ln_2.weight',
     },
-    r'module\.([0-9]+)\.post_attention_layernorm\.bias': {
+    r'([0-9]+)\.post_attention_layernorm\.bias': {
         'hf_k': 'transformer.h.<LAYER>.ln_2.bias',
     },
-    r'module\.([0-9]+)\.mlp\.dense_h_to_4h\.weight': {
+    r'([0-9]+)\.mlp\.dense_h_to_4h\.weight': {
         'hf_k': 'transformer.h.<LAYER>.mlp.c_fc.weight',
         'transpose': True,
     },
-    r'module\.([0-9]+)\.mlp\.dense_h_to_4h\.bias': {
+    r'([0-9]+)\.mlp\.dense_h_to_4h\.bias': {
         'hf_k': 'transformer.h.<LAYER>.mlp.c_fc.bias',
     },
-    r'module\.([0-9]+)\.mlp\.dense_4h_to_h\.weight': {
+    r'([0-9]+)\.mlp\.dense_4h_to_h\.weight': {
         'hf_k': 'transformer.h.<LAYER>.mlp.c_proj.weight',
         'transpose': True,
     },
-    r'module\.([0-9]+)\.mlp\.dense_4h_to_h\.bias': {
+    r'([0-9]+)\.mlp\.dense_4h_to_h\.bias': {
         'hf_k': 'transformer.h.<LAYER>.mlp.c_proj.bias',
     },
-    r'module\.([0-9]+)\.bias': {
+    r'([0-9]+)\.bias': {
         'hf_k': 'transformer.ln_f.bias'
     },
-    r'module\.([0-9]+)\.weight': {
+    r'([0-9]+)\.weight': {
         'hf_k': 'transformer.ln_f.weight'
     },
 }
@@ -77,9 +81,14 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: f
     layer_offset = 3  # depends on learned pos embeddings
     matched_keys = set()
 
+    print_rank_0(f'## Inputs state dict keys: {input_state_dict.keys()}')
+
     for k in input_state_dict.keys():
 
         for mapping_pattern, _mapping in HF_STATE_DICT_MAPPINGS.items():
+            if MODULE_PREFIX:
+                mapping_pattern = MODULE_PREFIX + mapping_pattern
+
             match = re.search(mapping_pattern, k)
 
             if match:
