@@ -24,6 +24,7 @@ from megatron import get_tokenizer
 from megatron import mpu
 from megatron.data.gpt_dataset import build_train_valid_test_datasets, build_dataset_group
 from megatron.model import GPTModel, GPTModelPipe
+from megatron.model.from_pretrained_hf import get_state_dict_from_hf
 from megatron.training import pretrain
 from megatron.utils import get_ltor_masks_and_position_ids, get_prefix_indices
 from megatron.utils import average_losses_across_data_parallel_group
@@ -83,6 +84,17 @@ def model_provider(pre_process=True, post_process=True):
 
             if args.from_pretrained_hf:
                 print_rank_0('##### enabled!!!')
+
+                model.load_state_dict(
+                    get_state_dict_from_hf(
+                        model.cpu().state_dict(),
+                        args.from_pretrained_hf,
+                        args.fp16
+                    )
+                )
+
+                print_rank_0('##### from hf completed')
+
 
         else:
             model = GPTModel(
