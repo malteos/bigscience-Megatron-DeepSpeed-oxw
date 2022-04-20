@@ -118,10 +118,11 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: f
                 input_state_dict[k] = hf_v
                 matched_keys.add(k)
 
-        not_matched_keys = set(input_state_dict.keys()) - matched_keys
+    # Check if all keys were matched
+    not_matched_keys = set(input_state_dict.keys()) - matched_keys
 
-        if len(not_matched_keys) > 0:
-            raise ValueError('Not matched keys: %s' % not_matched_keys)
+    if len(not_matched_keys) > 0:
+        raise ValueError('Not matched keys: %s' % not_matched_keys)
 
     print_rank_0(f'## Matched state dict keys: {len(matched_keys)}')
 
