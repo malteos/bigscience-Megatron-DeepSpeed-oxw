@@ -25,6 +25,7 @@ from megatron import mpu
 from megatron.data.gpt_dataset import build_train_valid_test_datasets, build_dataset_group
 from megatron.model import GPTModel, GPTModelPipe
 from megatron.model.from_pretrained_hf import get_state_dict_from_hf
+from megatron.model.from_pretrained_meg import get_state_dict_from_meg
 from megatron.training import pretrain
 from megatron.utils import get_ltor_masks_and_position_ids, get_prefix_indices
 from megatron.utils import average_losses_across_data_parallel_group
@@ -80,10 +81,10 @@ def model_provider(pre_process=True, post_process=True):
             model._megatron_batch_fn = get_batch_pipe
 
             ######
-            print_rank_0(f'######## from pretrained ... {args.from_pretrained_hf}')
+            print_rank_0(f'######## from pretrained ... hf={args.from_pretrained_hf}; meg={args.from_pretrained_meg}')
 
             if args.from_pretrained_hf:
-                print_rank_0('##### enabled!!!')
+                print_rank_0('##### enabled from HF')
 
                 model.load_state_dict(
                     get_state_dict_from_hf(
@@ -92,9 +93,18 @@ def model_provider(pre_process=True, post_process=True):
                         args.fp16
                     )
                 )
-
                 print_rank_0('##### from hf completed')
 
+            elif args.from_pretrained_meg:
+                print_rank_0('##### enabled from Meg')
+
+                model.load_state_dict(
+                    get_state_dict_from_meg(
+                        model.cpu().state_dict(),
+                        args.from_pretrained_meg,
+                    )
+                )
+                print_rank_0('##### from meg completed')
 
         else:
             model = GPTModel(
