@@ -416,7 +416,7 @@ def setup_model_and_optimizer(model_provider_func):
         if not args.deepspeed:
             raise ValueError('use pretrained models only with deepspeed enabled!')
 
-        old_model_state_dict = model[0].cpu().state_dict()
+        old_model_state_dict = model[0].cpu().state_dict().copy()
 
         if args.from_pretrained_hf:
             print_rank_0('##### enabled from HF')
@@ -434,6 +434,15 @@ def setup_model_and_optimizer(model_provider_func):
                     old_model_state_dict,
                     args.from_pretrained_meg,
                 )
+        else:
+            raise ValueError('either meg or hf must be provided')
+
+        # See https://github.com/microsoft/DeepSpeed/blob/be789b1665b8cafbd1b865534da501b3b287b17f/tests/unit/modeling.py#L918
+        missing_keys = []
+        unexpected_keys = []
+        error_msgs = []
+        metadata = getattr(state_dict, '_metadata', None)
+        state_dict = state_dict.copy()
 
         def load_pretrained(module: nn.Module, prefix=""):
             # because zero3 puts placeholders in model params, this context
@@ -441,13 +450,30 @@ def setup_model_and_optimizer(model_provider_func):
             # the state dict and then re-partitions them again
             with deepspeed.zero.GatheredParameters(list(module.parameters(recurse=False)), modifier_rank=0):
                 if torch.distributed.get_rank() == 0:
-                    module._load_from_state_dict(state_dict, prefix, local_metadata=None, strict=True)
+                    module._load_from_state_dict(state_dict, prefix, metadata,
+                                                 strict=True,
+                                                 missing_keys=missing_keys,
+                                                 unexpected_keys=unexpected_keys,
+                                                 error_msgs=error_msgs)
 
             for name, child in module._modules.items():
                 if child is not None:
                     load_pretrained(child, prefix + name + ".")
 
         load_pretrained(model[0], prefix="")
+
+        if len(missing_keys) > 0:
+            print_rank_0("Weights of {} not initialized from pretrained model: {}".format(
+                model.__class__.__name__,
+                missing_keys))
+        if len(unexpected_keys) > 0:
+            print_rank_0("Weights from pretrained model not used in {}: {}".format(
+                model.__class__.__name__,
+                unexpected_keys))
+        if len(error_msgs) > 0:
+            raise RuntimeError('Error(s) in loading state_dict for {}:\n\t{}'.format(
+                model.__class__.__name__,
+                "\n\t".join(error_msgs)))
 
         print_rank_0('##### from pretrained completed')
 
