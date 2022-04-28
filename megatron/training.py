@@ -416,7 +416,7 @@ def setup_model_and_optimizer(model_provider_func):
         if not args.deepspeed:
             raise ValueError('use pretrained models only with deepspeed enabled!')
 
-        old_model_state_dict = model[0].cpu().state_dict().copy()
+        old_model_state_dict = model[0].clone().cpu().state_dict().copy()
 
         if args.from_pretrained_hf:
             print_rank_0('##### enabled from HF')
