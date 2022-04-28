@@ -22,9 +22,16 @@ import sys
 import time
 import json
 # The earliest we can measure the start time.
+from torch import nn
+
+from megatron.model.from_pretrained_hf import get_state_dict_from_hf
+from megatron.model.from_pretrained_meg import get_state_dict_from_meg
+
 _TRAIN_START_TIME = time.time()
 
 import torch
+import torch.distributed
+
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
 
 from megatron import get_args
@@ -401,6 +408,49 @@ def setup_model_and_optimizer(model_provider_func):
             assert model.grid.get_slice_parallel_rank() == mpu.get_tensor_model_parallel_rank()
             assert model.grid.get_data_parallel_rank() == mpu.get_data_parallel_rank()
         model = [model]
+
+    # load pretrained HF or Meg models
+    print_rank_0(f'######## from pretrained ... hf={args.from_pretrained_hf}; meg={args.from_pretrained_meg}')
+
+    if args.from_pretrained_hf or args.from_pretrained_meg:
+        if not args.deepspeed:
+            raise ValueError('use pretrained models only with deepspeed enabled!')
+
+        old_model_state_dict = model[0].cpu().state_dict()
+
+        if args.from_pretrained_hf:
+            print_rank_0('##### enabled from HF')
+
+            state_dict = get_state_dict_from_hf(
+                    old_model_state_dict,
+                    args.from_pretrained_hf,
+                    args.fp16
+                )
+
+        elif args.from_pretrained_meg:
+            print_rank_0('##### enabled from Meg')
+
+            state_dict = get_state_dict_from_meg(
+                    old_model_state_dict,
+                    args.from_pretrained_meg,
+                )
+
+        def load_pretrained(module: nn.Module, prefix=""):
+            # because zero3 puts placeholders in model params, this context
+            # manager gathers (unpartitions) the params of the current layer, then loads from
+            # the state dict and then re-partitions them again
+            with deepspeed.zero.GatheredParameters(list(module.parameters(recurse=False)), modifier_rank=0):
+                if torch.distributed.get_rank() == 0:
+                    module._load_from_state_dict(state_dict, prefix, local_metadata=None, strict=True)
+
+            for name, child in module._modules.items():
+                if child is not None:
+                    load_pretrained(child, prefix + name + ".")
+
+        load_pretrained(model[0], prefix="")
+
+        print_rank_0('##### from pretrained completed')
+
 
     if args.load is not None:
         timers = get_timers()

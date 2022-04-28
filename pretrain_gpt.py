@@ -80,32 +80,6 @@ def model_provider(pre_process=True, post_process=True):
             # We need to call model.set_batch_fn after deepspeed.initialize
             model._megatron_batch_fn = get_batch_pipe
 
-            ######
-            print_rank_0(f'######## from pretrained ... hf={args.from_pretrained_hf}; meg={args.from_pretrained_meg}')
-
-            if args.from_pretrained_hf:
-                print_rank_0('##### enabled from HF')
-
-                model.load_state_dict(
-                    get_state_dict_from_hf(
-                        model.cpu().state_dict(),
-                        args.from_pretrained_hf,
-                        args.fp16
-                    )
-                )
-                print_rank_0('##### from hf completed')
-
-            elif args.from_pretrained_meg:
-                print_rank_0('##### enabled from Meg')
-
-                model.load_state_dict(
-                    get_state_dict_from_meg(
-                        model.cpu().state_dict(),
-                        args.from_pretrained_meg,
-                    )
-                )
-                print_rank_0('##### from meg completed')
-
         else:
             model = GPTModel(
                 num_tokentypes=0,
