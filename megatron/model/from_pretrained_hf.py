@@ -1,7 +1,6 @@
 import re
-import torch
 
-from transformers.models.gpt2 import GPT2Model, GPT2Config, GPT2LMHeadModel
+from transformers.models.gpt2 import GPT2LMHeadModel
 
 from megatron import print_rank_0
 
