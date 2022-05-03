@@ -18,7 +18,7 @@
 from functools import partial
 import torch
 
-from megatron import get_args
+from megatron import get_args, print_rank_0
 from megatron import mpu
 from megatron.enums import AttnMaskType
 from .module import MegatronModule, fp32_to_float16

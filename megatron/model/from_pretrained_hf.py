@@ -8,6 +8,13 @@ from megatron import print_rank_0
 MODULE_PREFIX = None
 # MODULE_PREFIX = r'module\.'
 
+"""
+Special weight operations:
+- Transpose the QKV matrix -> ordering fix
+    - weight
+    - bias
+- Transpose the weights. 
+"""
 
 HF_STATE_DICT_MAPPINGS = {
     r'tied_modules\.embed\.word_embeddings\.weight': {
@@ -25,10 +32,12 @@ HF_STATE_DICT_MAPPINGS = {
     },
     r'([0-9]+)\.self_attention\.query_key_value\.weight': {
         'hf_k': 'transformer.h.<LAYER>.attn.c_attn.weight',
-        'transpose': True,
+        #'transpose': True,
+        'fix_qkv_ordering_weight': True,
     },
     r'([0-9]+)\.self_attention\.query_key_value\.bias': {
         'hf_k': 'transformer.h.<LAYER>.attn.c_attn.bias',
+        'fix_qkv_ordering_bias': True,
     },
     r'([0-9]+)\.self_attention\.dense\.weight': {
         'hf_k': 'transformer.h.<LAYER>.attn.c_proj.weight',
@@ -65,10 +74,49 @@ HF_STATE_DICT_MAPPINGS = {
 }
 
 
-def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: float):
+def reverse_fix_query_key_value_ordering_weight(hf_params, checkpoint_version, num_splits, num_heads, hidden_size_per_head):
+    """
+    Reverse operation for `fix_query_key_value_ordering` for QKV weight
+    """
+    if checkpoint_version != 3.0:
+        raise ValueError('only checkpoint version == 3.0 supported')
+
+    hidden_size = hf_params.size()[0]
+    reverse_input_shape = (num_splits, num_heads, hidden_size_per_head, hidden_size)
+    reverse_saved_shape = (num_splits * hidden_size, hidden_size)
+
+    return hf_params.contiguous() \
+        .transpose(1, 0) \
+        .view(*reverse_input_shape) \
+        .transpose(1, 0).contiguous() \
+        .view(*reverse_saved_shape)
+
+
+def reverse_fix_query_key_value_ordering_bias(hf_params, checkpoint_version, num_splits, num_heads, hidden_size_per_head):
+    """
+    Reverse operation for `fix_query_key_value_ordering` for QKV bias
+    """
+    if checkpoint_version != 3.0:
+        raise ValueError('only checkpoint version == 3.0 supported')
+
+    hidden_size = hf_params.size()[0]
+    reverse_input_shape = (num_splits, num_heads, hidden_size_per_head)
+    reverse_saved_shape = (hidden_size,)
+
+    return hf_params.contiguous() \
+        .view(*reverse_input_shape) \
+        .transpose(1, 0).contiguous() \
+        .view(*reverse_saved_shape)
+
+
+def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: float, checkpoint_version = 3.0):
     print_rank_0(f'## Loading Huggingface model: {hf_model_name_or_path}')
 
     hf_model = GPT2LMHeadModel.from_pretrained(hf_model_name_or_path)
+
+    num_splits = 3  # TODO get value programmatic
+    num_heads = hf_model.config.n_head
+    hidden_size_per_head = hf_model.config.n_embd // num_heads
 
     if fp16:
         print_rank_0(f'## Converting HF model to fp16')
@@ -86,8 +134,7 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: f
     for k in input_state_dict.keys():
 
         for mapping_pattern, _mapping in HF_STATE_DICT_MAPPINGS.items():
-            if MODULE_PREFIX:
-                mapping_pattern = MODULE_PREFIX + mapping_pattern
+            mapping_pattern = (MODULE_PREFIX if MODULE_PREFIX else '') + mapping_pattern
 
             match = re.search(mapping_pattern, k)
 
@@ -104,13 +151,21 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: f
                 original_v = input_state_dict[k]
                 hf_v = hf_sd[hf_k]
 
+                if 'fix_qkv_ordering_weight' in hf_mapping:
+                    hf_v = reverse_fix_query_key_value_ordering_weight(hf_v, checkpoint_version, num_splits, num_heads,
+                                                                       hidden_size_per_head)
+
+                if 'fix_qkv_ordering_bias' in hf_mapping:
+                    hf_v = reverse_fix_query_key_value_ordering_bias(hf_v, checkpoint_version, num_splits, num_heads,
+                                                                     hidden_size_per_head)
+
                 if 'transpose' in hf_mapping and hf_mapping['transpose']:
                     hf_v = hf_v.t()
 
-                #if 'vocab_offset' in hf_mapping and hf_mapping['vocab_offset']:
-                #    # concat remaining from orignal value
-                #    hf_v = torch.cat((hf_v, original_v[hf_vocab_size:, :]))
-                #    # print('new shape', hf_v.shape)
+                # if 'vocab_offset' in hf_mapping and hf_mapping['vocab_offset']:
+                #     # concat remaining from original value
+                #     hf_v = torch.cat((hf_v, original_v[hf_vocab_size:, :]))
+                #     # print('new shape', hf_v.shape)
 
                 if original_v.shape != hf_v.shape:
                     raise ValueError(f'Shapes do not match: {k} = {original_v.shape}; {hf_k} = {hf_v.shape}')
