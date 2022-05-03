@@ -107,10 +107,10 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: f
                 if 'transpose' in hf_mapping and hf_mapping['transpose']:
                     hf_v = hf_v.t()
 
-                if 'vocab_offset' in hf_mapping and hf_mapping['vocab_offset']:
-                    # concat remaining from orignal value
-                    hf_v = torch.cat((hf_v, original_v[hf_vocab_size:, :]))
-                    # print('new shape', hf_v.shape)
+                #if 'vocab_offset' in hf_mapping and hf_mapping['vocab_offset']:
+                #    # concat remaining from orignal value
+                #    hf_v = torch.cat((hf_v, original_v[hf_vocab_size:, :]))
+                #    # print('new shape', hf_v.shape)
 
                 if original_v.shape != hf_v.shape:
                     raise ValueError(f'Shapes do not match: {k} = {original_v.shape}; {hf_k} = {hf_v.shape}')

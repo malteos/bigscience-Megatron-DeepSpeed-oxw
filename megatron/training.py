@@ -409,6 +409,7 @@ def setup_model_and_optimizer(model_provider_func):
             assert model.grid.get_data_parallel_rank() == mpu.get_data_parallel_rank()
         model = [model]
 
+    """
     # load pretrained HF or Meg models
     print_rank_0(f'######## from pretrained ... hf={args.from_pretrained_hf}; meg={args.from_pretrained_meg}')
 
@@ -476,7 +477,7 @@ def setup_model_and_optimizer(model_provider_func):
                 "\n\t".join(error_msgs)))
 
         print_rank_0('##### from pretrained completed')
-
+    """
 
     if args.load is not None:
         timers = get_timers()
