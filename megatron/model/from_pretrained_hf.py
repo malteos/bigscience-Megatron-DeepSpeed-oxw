@@ -40,6 +40,7 @@ HF_STATE_DICT_MAPPINGS = {
     },
     r'([0-9]+)\.self_attention\.dense\.weight': {
         'hf_k': 'transformer.h.<LAYER>.attn.c_proj.weight',
+        'transpose': True,
     },
     r'([0-9]+)\.self_attention\.dense\.bias': {
         'hf_k': 'transformer.h.<LAYER>.attn.c_proj.bias',
