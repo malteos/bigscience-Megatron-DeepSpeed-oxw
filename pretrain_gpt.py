@@ -81,8 +81,7 @@ def model_provider(pre_process=True, post_process=True):
             model._megatron_batch_fn = get_batch_pipe
 
             if args.from_pretrained_hf is not None:
-
-                print_rank_0(f'########### model_providermodel_providermodel_providermodel_providermodel_provider ')
+                print_rank_0(f'### Initialize weights from Huggingface model: {args.from_pretrained_hf}')
 
                 model.load_state_dict(
                     get_state_dict_from_hf(
@@ -91,73 +90,10 @@ def model_provider(pre_process=True, post_process=True):
                         args.fp16
                     )
                 )
+                print_rank_0(f'### HF state dict loaded')
 
-                ####
-                #
-                # from deepspeed.pipe import TiedLayerSpec
-                # from megatron.model.language_model import EmbeddingPipe
-                #
-                # hf_sd = get_state_dict_from_hf(
-                #     model.cpu().state_dict(),
-                #     args.from_pretrained_hf,
-                #     args.fp16,
-                #     args.checkp
-                # )
-                #
-                # print_rank_0(f'########### hf_sd = {hf_sd.keys()} ')
-                # not_found = []
-                #
-                # for idx, layer in enumerate(model.forward_funcs):
-                #     # Functions, etc. will not have state_dicts
-                #     if not hasattr(layer, 'load_state_dict') or not hasattr(layer, 'state_dict'):
-                #         continue
-                #
-                #     #spec = self.specs[idx]
-                #
-                #     print_rank_0(f'########### {idx} {layer}  --- {model.specs[idx]} ')
-                #
-                #     sd = layer.state_dict()
-                #
-                #     if isinstance(layer, EmbeddingPipe):
-                #         # tied modules
-                #         # ['tied_modules.embed.word_embeddings.weight', 'tied_modules.embed.position_embeddings.weight',
-                #         k_prefix = 'tied_modules.embed'
-                #
-                #     else:
-                #         k_prefix = f'{idx}'
-                #
-                #     ###
-                #
-                #     #if isinstance(model.specs[idx], TiedLayerSpec):
-                #     #    print_rank_0(f'########### TiedLayerSpec')
-                #
-                #     for k, v in sd.items():
-                #         k = f'{k_prefix}.{k}'
-                #
-                #         print_rank_0(f'########### -  {k} {v.shape} ')
-                #
-                #         #sd[k] = hf_sd[k]
-                #         #sd[k] = torch.ones_like(v)
-                #
-                #         if k in hf_sd:
-                #             pass
-                #         else:
-                #             print_rank_0(f'NOT FOUND')
-                #
-                #             not_found.append((
-                #                   layer, k
-                #             ))
-                #
-                #
-                #     layer.load_state_dict(sd)
-                #
-                #
-                #
-                # print_rank_0(f'########### model_providermodel_providermodel_providermodel_providermodel_provider ')
-                #
-                # if len(not_found) > 0:
-                #     print_rank_0(f'NOT FOUND => {not_found}')
-                #     raise ValueError('stop')
+            elif args.from_pretrained_meg is not None:
+                raise NotImplementedError()
 
         else:
             model = GPTModel(

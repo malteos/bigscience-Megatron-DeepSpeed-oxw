@@ -16,6 +16,7 @@ Special weight operations:
 """
 
 HF_STATE_DICT_MAPPINGS = {
+    # ds state dict key => HF state dict key + convert operation
     r'tied_modules\.embed\.word_embeddings\.weight': {
         'hf_k': 'transformer.wte.weight',
         'vocab_offset': True,
@@ -31,7 +32,6 @@ HF_STATE_DICT_MAPPINGS = {
     },
     r'([0-9]+)\.self_attention\.query_key_value\.weight': {
         'hf_k': 'transformer.h.<LAYER>.attn.c_attn.weight',
-        #'transpose': True,
         'fix_qkv_ordering_weight': True,
     },
     r'([0-9]+)\.self_attention\.query_key_value\.bias': {
@@ -120,7 +120,6 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: f
 
     if fp16:
         print_rank_0(f'## Converting HF model to fp16')
-
         hf_model = hf_model.half()
 
     hf_vocab_size = len(hf_model.transformer.wte.weight)
@@ -162,6 +161,7 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: f
                 if 'transpose' in hf_mapping and hf_mapping['transpose']:
                     hf_v = hf_v.t()
 
+                # TODO determine vocab offset automatically based on ds args + hf config
                 # if 'vocab_offset' in hf_mapping and hf_mapping['vocab_offset']:
                 #     # concat remaining from original value
                 #     hf_v = torch.cat((hf_v, original_v[hf_vocab_size:, :]))
