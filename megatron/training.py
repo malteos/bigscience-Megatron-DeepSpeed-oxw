@@ -15,17 +15,14 @@
 
 """Pretrain utilities."""
 
-from datetime import datetime
 import bisect
+import json
 import math
 import sys
 import time
-import json
-# The earliest we can measure the start time.
-from torch import nn
+from datetime import datetime
 
-from megatron.model.from_pretrained_hf import get_state_dict_from_hf
-from megatron.model.from_pretrained_meg import get_state_dict_from_meg
+# The earliest we can measure the start time.
 
 _TRAIN_START_TIME = time.time()
 

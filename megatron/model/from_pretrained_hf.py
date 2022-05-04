@@ -110,7 +110,7 @@ def reverse_fix_query_key_value_ordering_bias(hf_params, checkpoint_version, num
         .view(*reverse_saved_shape)
 
 
-def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: float, checkpoint_version = 3.0):
+def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: bool = False, bf16: bool = False, checkpoint_version = 3.0):
     print_rank_0(f'## Loading Huggingface model: {hf_model_name_or_path}')
 
     hf_model = GPT2LMHeadModel.from_pretrained(hf_model_name_or_path)
@@ -119,9 +119,16 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: f
     num_heads = hf_model.config.n_head
     hidden_size_per_head = hf_model.config.n_embd // num_heads
 
+    if fp16 and bf16:
+        raise ValueError('fp16 and bf16 cannot be enabled at the same time!')
+
     if fp16:
         print_rank_0(f'## Converting HF model to fp16')
         hf_model = hf_model.half()
+
+    elif bf16:
+        print_rank_0(f'## Converting HF model to bf16')
+        hf_model = hf_model.bfloat16()
 
     hf_vocab_size = len(hf_model.transformer.wte.weight)
     hf_sd = hf_model.state_dict()

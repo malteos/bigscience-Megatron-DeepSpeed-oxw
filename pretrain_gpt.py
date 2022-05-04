@@ -87,7 +87,8 @@ def model_provider(pre_process=True, post_process=True):
                     get_state_dict_from_hf(
                         model.cpu().state_dict(),
                         args.from_pretrained_hf,
-                        args.fp16
+                        args.fp16,
+                        args.bf16,
                     )
                 )
                 print_rank_0(f'### HF state dict loaded')
