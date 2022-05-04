@@ -21,7 +21,7 @@ def get_args():
 def main():
     args = get_args()
     indexed_dataset = get_indexed_dataset_(args.dataset_prefix,
-                                           data_impl='mmap',
+                                           data_impl=args.dataset_impl,
                                            skip_warmup=True)
 
     total_num_of_documents = indexed_dataset.sizes.shape[0]
