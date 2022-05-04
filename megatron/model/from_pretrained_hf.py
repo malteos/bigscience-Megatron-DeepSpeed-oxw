@@ -1,5 +1,6 @@
 import re
 
+import torch
 from transformers.models.gpt2 import GPT2LMHeadModel
 
 from megatron import print_rank_0
@@ -146,10 +147,10 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: f
                     hf_idx = idx - layer_offset
                     hf_k = hf_k.replace('<LAYER>', str(hf_idx))
 
-                # check if values match
                 original_v = input_state_dict[k]
                 hf_v = hf_sd[hf_k]
 
+                # convert params
                 if 'fix_qkv_ordering_weight' in hf_mapping:
                     hf_v = reverse_fix_query_key_value_ordering_weight(hf_v, checkpoint_version, num_splits, num_heads,
                                                                        hidden_size_per_head)
@@ -161,12 +162,19 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: f
                 if 'transpose' in hf_mapping and hf_mapping['transpose']:
                     hf_v = hf_v.t()
 
-                # TODO determine vocab offset automatically based on ds args + hf config
-                # if 'vocab_offset' in hf_mapping and hf_mapping['vocab_offset']:
-                #     # concat remaining from original value
-                #     hf_v = torch.cat((hf_v, original_v[hf_vocab_size:, :]))
-                #     # print('new shape', hf_v.shape)
+                if 'vocab_offset' in hf_mapping and hf_mapping['vocab_offset']:
+                    # concat remaining from original value if ds vocab is larger
+                    ds_vocab_size = len(original_v)
 
+                    if ds_vocab_size > hf_vocab_size:
+                        print_rank_0(f'## vocab offset requested: input shape {hf_v.shape}')
+                        hf_v = torch.cat((hf_v, original_v[hf_vocab_size:, :]))
+
+                        print_rank_0('### new shape  {hf_v.shape}')
+                    else:
+                        print_rank_0(f'## vocab offset requested, but not needed: ds_vocab_size = {ds_vocab_size}; hf_vocab_size = {hf_vocab_size}')
+
+                # check if value shapes match
                 if original_v.shape != hf_v.shape:
                     raise ValueError(f'Shapes do not match: {k} = {original_v.shape}; {hf_k} = {hf_v.shape}')
 
