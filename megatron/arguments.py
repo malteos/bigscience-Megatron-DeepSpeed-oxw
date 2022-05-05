@@ -27,6 +27,7 @@ import deepspeed
 from megatron.enums import PositionEmbeddingType
 import megatron
 from megatron.logging import log_levels
+from megatron.oxw.arguments import _add_oxw_args
 
 
 def parse_args(extra_args_provider=None, defaults={},
@@ -1065,14 +1066,4 @@ def _add_activation_checkpoint_args(parser):
                        help='does a synchronize at the beginning and end of each checkpointed layer.')
     group.add_argument('--profile-backward', action='store_true',
                        help='Enables backward pass profiling for checkpointed layers.')
-    return parser
-
-
-def _add_oxw_args(parser):
-    group = parser.add_argument_group('oxw',
-                                      'Custom oxw Configurations (load from pretrained hf, ...')
-    group.add_argument('--from-pretrained-hf', type=str, default=None,
-                       help='Path to pretrained Huggingface model.')
-    group.add_argument('--from-pretrained-meg', type=str, default=None,
-                       help='Path to pretrained Megatron model (no deepspeed).')
     return parser

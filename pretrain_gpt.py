@@ -24,8 +24,9 @@ from megatron import get_tokenizer
 from megatron import mpu
 from megatron.data.gpt_dataset import build_train_valid_test_datasets, build_dataset_group
 from megatron.model import GPTModel, GPTModelPipe
-from megatron.model.from_pretrained_hf import get_state_dict_from_hf
-from megatron.model.from_pretrained_meg import get_state_dict_from_meg
+from megatron.oxw.bitfit import deactivate_gradients
+from megatron.oxw.from_pretrained_hf import get_state_dict_from_hf
+from megatron.oxw.from_pretrained_meg import get_state_dict_from_meg
 from megatron.training import pretrain
 from megatron.utils import get_ltor_masks_and_position_ids, get_prefix_indices
 from megatron.utils import average_losses_across_data_parallel_group
@@ -95,6 +96,10 @@ def model_provider(pre_process=True, post_process=True):
 
             elif args.from_pretrained_meg is not None:
                 raise NotImplementedError()
+
+            # BitFit
+            if args.bitfit:
+                model = deactivate_gradients(model, 'bias')
 
         else:
             model = GPTModel(
