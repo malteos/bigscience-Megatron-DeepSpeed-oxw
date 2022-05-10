@@ -82,17 +82,20 @@ def model_provider(pre_process=True, post_process=True):
             model._megatron_batch_fn = get_batch_pipe
 
             if args.from_pretrained_hf is not None:
-                print_rank_0(f'### Initialize weights from Huggingface model: {args.from_pretrained_hf}')
+                if args.load is not None and os.path.exists(args.load) and len(os.listdir(args.load)) > 0:
+                    print_rank_0(f'### Pretrained weights NOT initialized. Regular checkpoint provided via --load')
+                else:
+                    print_rank_0(f'### Initialize weights from Huggingface model: {args.from_pretrained_hf}')
 
-                model.load_state_dict(
-                    get_state_dict_from_hf(
-                        model.cpu().state_dict(),
-                        args.from_pretrained_hf,
-                        args.fp16,
-                        args.bf16,
+                    model.load_state_dict(
+                        get_state_dict_from_hf(
+                            model.cpu().state_dict(),
+                            args.from_pretrained_hf,
+                            args.fp16,
+                            args.bf16,
+                        )
                     )
-                )
-                print_rank_0(f'### HF state dict loaded')
+                    print_rank_0(f'### HF state dict loaded')
 
             elif args.from_pretrained_meg is not None:
                 raise NotImplementedError()
