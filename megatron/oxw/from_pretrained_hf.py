@@ -1,6 +1,7 @@
 import re
 
 import torch
+from transformers.models.auto import AutoModelForCausalLM
 from transformers.models.gpt2 import GPT2LMHeadModel
 
 from megatron import print_rank_0
@@ -113,7 +114,8 @@ def reverse_fix_query_key_value_ordering_bias(hf_params, checkpoint_version, num
 def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: bool = False, bf16: bool = False, checkpoint_version = 3.0):
     print_rank_0(f'## Loading Huggingface model: {hf_model_name_or_path}')
 
-    hf_model = GPT2LMHeadModel.from_pretrained(hf_model_name_or_path)
+    # GPT2LMHeadModel, OPTForCausalLM
+    hf_model = AutoModelForCausalLM.from_pretrained(hf_model_name_or_path)
 
     num_splits = 3  # TODO get value programmatic
     num_heads = hf_model.config.n_head
