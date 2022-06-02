@@ -122,13 +122,13 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: b
     num_splits = 3  # TODO get value programmatic
 
     if isinstance(hf_config, OPTConfig):
-        logger.info('OPT config')
+        print_rank_0('## OPT config')
 
         num_heads = hf_config.num_attention_heads
         hidden_size_per_head = hf_config.hidden_size // num_heads
 
     elif isinstance(hf_config, GPT2Config):
-        logger.info('GPT2 config')
+        print_rank_0('## GPT2 config')
 
         num_heads = hf_config.n_head
         hidden_size_per_head = hf_config.n_embd // num_heads
