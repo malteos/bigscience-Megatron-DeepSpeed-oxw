@@ -1,6 +1,7 @@
 import re
 
 import torch
+from transformers import OPTConfig, GPT2Config
 from transformers.models.auto import AutoModelForCausalLM
 from transformers.models.gpt2 import GPT2LMHeadModel
 
@@ -116,10 +117,24 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: b
 
     # GPT2LMHeadModel, OPTForCausalLM
     hf_model = AutoModelForCausalLM.from_pretrained(hf_model_name_or_path)
+    hf_config = hf_model.config
 
     num_splits = 3  # TODO get value programmatic
-    num_heads = hf_model.config.n_head
-    hidden_size_per_head = hf_model.config.n_embd // num_heads
+
+    if isinstance(hf_config, OPTConfig):
+        logger.info('OPT config')
+
+        num_heads = hf_config.num_attention_heads
+        hidden_size_per_head = hf_config.hidden_size // num_heads
+
+    elif isinstance(hf_config, GPT2Config):
+        logger.info('GPT2 config')
+
+        num_heads = hf_config.n_head
+        hidden_size_per_head = hf_config.n_embd // num_heads
+
+    else:
+        raise ValueError(f'Supported model config: {hf_config}')
 
     if fp16 and bf16:
         raise ValueError('fp16 and bf16 cannot be enabled at the same time!')
