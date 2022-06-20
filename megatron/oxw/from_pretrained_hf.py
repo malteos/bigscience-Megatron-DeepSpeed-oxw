@@ -227,6 +227,7 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: b
 
         layer_offset = 3  # depends on learned pos embeddings
         matched_keys = set()
+        matched_hf_keys = set()
 
         print_rank_0(f'## OPT Inputs state dict keys: {input_state_dict.keys()}')
 
@@ -252,6 +253,8 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: b
                                 hf_k = hf_k.replace('<LAYER>', str(hf_idx))
 
                             hf_vs.append(hf_sd[hf_k])
+
+                            matched_hf_keys.add(hf_k)
 
                         # concat
                         hf_v = torch.cat(hf_vs)
@@ -308,14 +311,19 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: b
 
                         input_state_dict[k] = hf_v
                         matched_keys.add(k)
+                        matched_hf_keys.add(hf_k)
                     else:
                         raise ValueError('Either hf_k or hf_keys must be set!')
 
         # Check if all keys were matched
         not_matched_keys = set(input_state_dict.keys()) - matched_keys
+        not_matched_hf_keys = set(hf_sd.keys()) - matched_hf_keys
 
         if len(not_matched_keys) > 0:
             raise ValueError('Not matched keys: %s' % not_matched_keys)
+
+        if len(not_matched_hf_keys) > 0:
+            raise ValueError('Not matched HF keys: %s' % not_matched_hf_keys)
 
         print_rank_0(f'## OPT Matched state dict keys: {len(matched_keys)}')
 
