@@ -13,4 +13,7 @@ def _add_oxw_args(parser):
     group.add_argument('--no-final-layer-norm', action='store_true',
                        help='Disable final layer norm after transformer layers (as done in OTP)',
                        dest='no_final_layer_norm')
+    group.add_argument('--relu-activation', action='store_true',
+                       help='Enable ReLu activation function (as done in BART/OTP)',
+                       dest='relu_activation')
     return parser
