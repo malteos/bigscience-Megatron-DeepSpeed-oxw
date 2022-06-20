@@ -18,6 +18,8 @@ Special weight operations:
 - Transpose the weights. 
 """
 
+IGNORE_HF_KEYS = {'lm_head.weight'}  # tied weights in megatron
+
 HF_GPT2_STATE_DICT_MAPPINGS = {
     # ds state dict key => HF state dict key + convert operation
     r'tied_modules\.embed\.word_embeddings\.weight': {
@@ -317,7 +319,7 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: b
 
         # Check if all keys were matched
         not_matched_keys = set(input_state_dict.keys()) - matched_keys
-        not_matched_hf_keys = set(hf_sd.keys()) - matched_hf_keys
+        not_matched_hf_keys = set(hf_sd.keys()) - matched_hf_keys - IGNORE_HF_KEYS
 
         if len(not_matched_keys) > 0:
             raise ValueError('Not matched keys: %s' % not_matched_keys)
