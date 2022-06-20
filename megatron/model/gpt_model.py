@@ -18,7 +18,7 @@
 from functools import partial
 import torch
 
-from megatron import get_args, print_rank_0
+from megatron import get_args
 from megatron import mpu
 from megatron.enums import AttnMaskType
 from .module import MegatronModule, fp32_to_float16
@@ -264,7 +264,9 @@ class GPTModelPipe(PipelineModule,MegatronModule):
 
         # Final layernorm after transformer layers
         if args.no_final_layer_norm:
-            print_rank_0(f'### NO final layer norm ')
+            from megatron import print_rank_0
+
+            print_rank_0(f'### NO final layer norm ###########')
         else:
             self.specs.append(
                 LayerSpec(LayerNorm,
