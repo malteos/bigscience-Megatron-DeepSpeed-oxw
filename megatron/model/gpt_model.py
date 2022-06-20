@@ -263,10 +263,11 @@ class GPTModelPipe(PipelineModule,MegatronModule):
         self.specs.append(lambda x: x.transpose(0, 1).contiguous())
 
         # Final layernorm after transformer layers
-        self.specs.append(
-            LayerSpec(LayerNorm,
-                      args.hidden_size,
-                      eps=args.layernorm_epsilon))
+        if not args.no_final_layer_norm:
+            self.specs.append(
+                LayerSpec(LayerNorm,
+                          args.hidden_size,
+                          eps=args.layernorm_epsilon))
 
         def _logits_helper(embedding, lm_output):
             """A wrapper to massage inputs/outputs from pipeline. """

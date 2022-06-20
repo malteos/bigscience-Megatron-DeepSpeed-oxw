@@ -10,4 +10,7 @@ def _add_oxw_args(parser):
     group.add_argument('--bitfit', action='store_true',
                        help='Enable BitFit (training bias terms only)',
                        dest='bitfit')
+    group.add_argument('--no-final-layer-norm', action='store_true',
+                       help='Disable final layer norm after transformer layers (as done in OTP)',
+                       dest='no_final_layer_norm')
     return parser
