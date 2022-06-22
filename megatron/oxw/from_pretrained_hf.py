@@ -266,7 +266,7 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: b
         num_heads = hf_config.num_attention_heads
         hidden_size_per_head = hf_config.hidden_size // num_heads
 
-        hf_vocab_size = len(hf_model.model.decoder.embed_tokens.weight)  # hf_model.transformer.wte.weight
+        hf_vocab_size = len(hf_model.transformer.word_embeddings.weight)  # hf_model.transformer.wte.weight
         hf_sd = hf_model.state_dict()
 
         layer_offset = 3  # depends on learned pos embeddings
