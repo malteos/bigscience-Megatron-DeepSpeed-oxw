@@ -1,12 +1,11 @@
 import re
 
 import torch
-from transformers import OPTConfig, GPT2Config
+from transformers import OPTConfig, GPT2Config, BloomConfig
 from transformers.models.auto import AutoModelForCausalLM
 from transformers.models.gpt2 import GPT2LMHeadModel
 
 from transformers.models.bloom.modeling_bloom import BloomModel, BloomForCausalLM
-from transformers.models.bloom.configuration_bloom import BloomConfig
 
 from megatron import print_rank_0
 
@@ -558,6 +557,6 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: b
 
         print_rank_0(f'## Matched state dict keys: {len(matched_keys)}')
     else:
-        raise ValueError(f'Supported model config: {hf_config}')
+        raise ValueError(f'Provided model config is NOT support: {hf_config} ({type(hf_config)})')
 
     return input_state_dict
