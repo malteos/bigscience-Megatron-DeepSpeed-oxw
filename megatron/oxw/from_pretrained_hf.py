@@ -86,10 +86,10 @@ HF_BLOOM_STATE_DICT_MAPPINGS = {
     r'tied_modules\.embed\.word_embeddings\.weight': {
         'hf_k': 'transformer.word_embeddings.weight',
     },
-    r'tied_modules\.embed\.word_embeddings_layernorm\.weight': {
+    r'tied_modules\.embed\.word_embeddings.norm\.weight': {
         'hf_k': 'transformer.word_embeddings_layernorm.weight',
     },
-    r'tied_modules\.embed\.word_embeddings_layernorm\.bias': {
+    r'tied_modules\.embed\.word_embeddings.norm\.bias': {
         'hf_k': 'transformer.word_embeddings_layernorm.bias',
     },
     r'([0-9]+)\.input_layernorm\.weight': {
