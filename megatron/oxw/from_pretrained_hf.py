@@ -277,7 +277,7 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: b
 
         for k in input_state_dict.keys():
 
-            for mapping_pattern, _mapping in HF_OPT_STATE_DICT_MAPPINGS.items():
+            for mapping_pattern, _mapping in HF_BLOOM_STATE_DICT_MAPPINGS.items():
                 mapping_pattern = (MODULE_PREFIX if MODULE_PREFIX else '') + mapping_pattern
 
                 match = re.search(mapping_pattern, k)
