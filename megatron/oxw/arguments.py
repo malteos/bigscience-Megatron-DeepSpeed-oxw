@@ -11,9 +11,11 @@ def _add_oxw_args(parser):
                        help='Enable BitFit (training bias terms only)',
                        dest='bitfit')
     group.add_argument('--no-final-layer-norm', action='store_true',
-                       help='Disable final layer norm after transformer layers (as done in OTP)',
+                       help='Disable final layer norm after transformer layers (as done in OPT)',
                        dest='no_final_layer_norm')
     group.add_argument('--relu-activation', action='store_true',
-                       help='Enable ReLu activation function (as done in BART/OTP)',
+                       help='Enable ReLu activation function (as done in BART/OPT)',
                        dest='relu_activation')
+    # group.add_argument('--position-embedding-offset', type=int, default=None,
+    #                    help='Offset to position embeddings (as done in OPT).')
     return parser
