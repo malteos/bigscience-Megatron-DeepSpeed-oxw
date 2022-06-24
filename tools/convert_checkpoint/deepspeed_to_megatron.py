@@ -25,6 +25,7 @@ def parse_arguments():
     parser.add_argument('--target_tp', default=1, type=int, help='Target TP degree')
     parser.add_argument('--target_pp', default=1, type=int, help='Target PP degree')
     parser.add_argument('--for_release', action='store_true', help='Convert for release purpose, reset some (progress) counters.')
+    parser.add_argument('--tokenizer_name_or_path', default=None, type=str, help='Override tokenizer name or path from DS config')
     args = parser.parse_args()
     print(f'args = {args}')
     return args

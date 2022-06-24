@@ -83,6 +83,12 @@ def main():
         tokenizer_model_name = ds_args.tokenizer_name_or_path
     else:
         raise ValueError(f"Unrecognized tokenizer_type {tokenizer_type}")
+
+    if args.tokenizer_name_or_path:
+        print(f'Override tokenizer to {args.tokenizer_model_name}')
+
+        tokenizer_model_name = args.tokenizer_model_name
+
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_model_name)
     tokenizer_class = type(tokenizer).__name__
     output_config["tokenizer_class"] = tokenizer_class
