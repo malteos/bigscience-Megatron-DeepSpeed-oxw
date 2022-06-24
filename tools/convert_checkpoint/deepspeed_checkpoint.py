@@ -24,15 +24,25 @@ LAYER_CONCAT_DIM = {
 
 class DeepSpeedCheckpoint(object):
     def __init__(self, dir, tp_degree=None, pp_degree=None):
+        print(f'Loading checkpoint from {dir} ...')
         self.dir = dir
         self.file_list = self._get_files(dir)
         self.zero_files = self._get_files_with_prefix(self.file_list, ZERO_FILE_PREFIX)
         self.layer_files = self._get_files_with_prefix(self.file_list, LAYER_FILE_PREFIX)
         self.mp_rank_files = self._get_files_with_prefix(self.file_list, MP_RANK_FILE_PREFIX)
+
+        print(f'zero_files = {self.zero_files}')
+        print(f'layer_files = {self.layer_files}')
+        print(f'mp_rank_files = {self.mp_rank_files}')
+
         self.layer_keys = self._get_layer_keys()
         self.layer_count = len(self.layer_keys)
         self.original_tp_degree = len(self._get_files_with_prefix(self.layer_files, f'{LAYER_FILE_PREFIX}01'))
         self.original_pp_degree = len(self.mp_rank_files) // self.original_tp_degree
+
+        print(f'original_tp_degree = {self.original_tp_degree}')
+        print(f'original_pp_degree = {self.original_pp_degree}')
+
         self.dp_degree = len(self.zero_files) // (self.original_pp_degree * self.original_tp_degree)
         self.tp_degree = self.original_tp_degree if tp_degree is None else tp_degree
         self.pp_degree = self.original_pp_degree if pp_degree is None else pp_degree
