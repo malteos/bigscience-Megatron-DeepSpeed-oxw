@@ -85,9 +85,9 @@ def main():
         raise ValueError(f"Unrecognized tokenizer_type {tokenizer_type}")
 
     if args.tokenizer_name_or_path:
-        print(f'Override tokenizer to {args.tokenizer_model_name}')
+        print(f'Override tokenizer to {args.tokenizer_name_or_path}')
 
-        tokenizer_model_name = args.tokenizer_model_name
+        tokenizer_model_name = args.tokenizer_name_or_path
 
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_model_name)
     tokenizer_class = type(tokenizer).__name__
