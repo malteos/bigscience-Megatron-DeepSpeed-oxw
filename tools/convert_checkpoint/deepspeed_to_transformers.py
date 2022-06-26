@@ -89,6 +89,8 @@ def main():
 
         tokenizer_model_name = args.tokenizer_name_or_path
 
+    print(f'Output tokenizer = {tokenizer_model_name}')
+
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_model_name)
     tokenizer_class = type(tokenizer).__name__
     output_config["tokenizer_class"] = tokenizer_class
