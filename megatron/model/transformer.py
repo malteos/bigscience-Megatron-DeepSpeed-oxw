@@ -34,8 +34,6 @@ from .glu_activations import GLU_ACTIVATIONS
 from .positional_embeddings import RotaryEmbedding, apply_rotary_pos_emb_torch, apply_rotary_pos_emb
 
 # flags required to enable jit fusion kernels
-from ..oxw.bitfit import deactivate_gradients
-
 torch._C._jit_set_profiling_mode(False)
 torch._C._jit_set_profiling_executor(False)
 torch._C._jit_override_can_fuse_on_cpu(True)

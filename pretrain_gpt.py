@@ -15,25 +15,24 @@
 
 """Pretrain GPT"""
 
-import torch
+import os
 from functools import partial
+
+import deepspeed
+import torch
+from deepspeed.runtime.utils import see_memory_usage
+
 from megatron import get_args
-from megatron import print_rank_0
 from megatron import get_timers
 from megatron import get_tokenizer
 from megatron import mpu
+from megatron import print_rank_0
 from megatron.data.gpt_dataset import build_train_valid_test_datasets, build_dataset_group
 from megatron.model import GPTModel, GPTModelPipe
-from megatron.oxw.bitfit import deactivate_gradients
 from megatron.oxw.from_pretrained_hf import get_state_dict_from_hf
-from megatron.oxw.from_pretrained_meg import get_state_dict_from_meg
 from megatron.training import pretrain
-from megatron.utils import get_ltor_masks_and_position_ids, get_prefix_indices
 from megatron.utils import average_losses_across_data_parallel_group
-
-import deepspeed
-from deepspeed.runtime.utils import see_memory_usage
-import os
+from megatron.utils import get_ltor_masks_and_position_ids
 
 try:
     from torch.distributed.elastic.multiprocessing.errors import record
