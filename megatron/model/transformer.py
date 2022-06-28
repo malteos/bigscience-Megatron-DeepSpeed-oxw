@@ -19,7 +19,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from megatron import get_args, logging, print_rank_0
+from megatron import get_args, logging
 from megatron import mpu
 from .module import MegatronModule
 from megatron.enums import AttnMaskType, LayerType, AttnType, PositionEmbeddingType
@@ -505,6 +505,8 @@ class ParallelTransformerLayer(MegatronModule):
 
         # BitFit
         if args.bitfit:
+            from megatron import print_rank_0
+
             deactivated = []
             activated = []
             needle_name = 'bias'
