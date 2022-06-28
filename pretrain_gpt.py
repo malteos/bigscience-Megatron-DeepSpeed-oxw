@@ -101,8 +101,8 @@ def model_provider(pre_process=True, post_process=True):
                 raise NotImplementedError()
 
             # BitFit
-            if args.bitfit:
-                model = deactivate_gradients(model, 'bias')
+            # if args.bitfit:
+            #     model = deactivate_gradients(model, 'bias')
 
         else:
             model = GPTModel(

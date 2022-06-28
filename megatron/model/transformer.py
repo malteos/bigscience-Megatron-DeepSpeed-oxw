@@ -19,7 +19,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from megatron import get_args, logging
+from megatron import get_args, logging, print_rank_0
 from megatron import mpu
 from .module import MegatronModule
 from megatron.enums import AttnMaskType, LayerType, AttnType, PositionEmbeddingType
@@ -34,6 +34,8 @@ from .glu_activations import GLU_ACTIVATIONS
 from .positional_embeddings import RotaryEmbedding, apply_rotary_pos_emb_torch, apply_rotary_pos_emb
 
 # flags required to enable jit fusion kernels
+from ..oxw.bitfit import deactivate_gradients
+
 torch._C._jit_set_profiling_mode(False)
 torch._C._jit_set_profiling_executor(False)
 torch._C._jit_override_can_fuse_on_cpu(True)
@@ -497,6 +499,29 @@ class ParallelTransformerLayer(MegatronModule):
                 self.alibi = self.alibi.to(torch.bfloat16)
         else:
             self.alibi = None
+
+        ######################
+        ######################
+
+        # BitFit
+        if args.bitfit:
+            deactivated = []
+            activated = []
+            needle_name = 'bias'
+
+            for name, param in self.named_parameters():
+                if needle_name in name:
+                    param.requires_grad = True
+                    activated.append(name)
+                else:
+                    param.requires_grad = False
+                    deactivated.append(name)
+            print_rank_0(
+                f'Activated parameters (name contains `{needle_name}`): {len(activated)} ({activated[:10]} ...)')
+            print_rank_0(f'Deactivated parameters: {len(deactivated)} ({deactivated[:3]} ...)')
+            # self = deactivate_gradients(self, 'bias')
+        ######################
+        ######################
 
     def forward(self, hidden_states, attention_mask,
                 encoder_output=None, enc_dec_attn_mask=None,
