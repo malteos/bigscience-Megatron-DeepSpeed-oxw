@@ -503,6 +503,7 @@ class ParallelTransformerLayer(MegatronModule):
 
         # BitFit
         if args.bitfit:
+            from megatron import print_rank_0
 
             deactivated = []
             activated = []
@@ -515,9 +516,9 @@ class ParallelTransformerLayer(MegatronModule):
                 else:
                     param.requires_grad = False
                     deactivated.append(name)
-            print(
+            print_rank_0(
                 f'Activated parameters (name contains `{needle_name}`): {len(activated)} ({activated[:10]} ...)')
-            print(f'Deactivated parameters: {len(deactivated)} ({deactivated[:3]} ...)')
+            print_rank_0(f'Deactivated parameters: {len(deactivated)} ({deactivated[:3]} ...)')
             # self = deactivate_gradients(self, 'bias')
         ######################
         ######################
