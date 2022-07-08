@@ -86,6 +86,11 @@ def model_provider(pre_process=True, post_process=True):
                 else:
                     print_rank_0(f'### Initialize weights from Huggingface model: {args.from_pretrained_hf}')
 
+                    # TP/PP
+                    print_rank_0(f'### {model.num_stages=}')
+                    print_rank_0(f'### {model.stage_id=}')
+                    print_rank_0(f'### {model.parts=}')
+
                     model.load_state_dict(
                         get_state_dict_from_hf(
                             model.cpu().state_dict(),
