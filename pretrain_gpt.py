@@ -91,6 +91,9 @@ def model_provider(pre_process=True, post_process=True):
                     print(f'### rank={torch.distributed.get_rank()}; {model.stage_id=}', flush=True)
                     print(f'### rank={torch.distributed.get_rank()};{model.parts=}', flush=True)
 
+                    if args.tensor_model_parallel_size != 1:
+                        raise ValueError(f'Cannot load from pretrained with TP != 1, use `tools/convert_on_disk.py` instead!')
+
                     model.load_state_dict(
                         get_state_dict_from_hf(
                             model.cpu().state_dict(),
