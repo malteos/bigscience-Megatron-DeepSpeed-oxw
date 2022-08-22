@@ -3,6 +3,7 @@ HF_BLOOM_STATE_DICT_MAPPINGS = {
     # ds state dict key => HF state dict key + convert operation
     r'tied_modules\.embed\.word_embeddings\.weight': {
         'hf_k': 'transformer.word_embeddings.weight',
+        'vocab_offset': True,
     },
     r'tied_modules\.embed\.word_embeddings.norm\.weight': {
         'hf_k': 'transformer.word_embeddings_layernorm.weight',

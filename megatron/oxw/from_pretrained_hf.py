@@ -167,9 +167,12 @@ def get_state_dict_from_hf(input_state_dict, hf_model_name_or_path: str, fp16: b
                                 hf_v = torch.cat((hf_v, original_v[hf_vocab_size:, :]))
 
                                 print_rank_0('### new shape  {hf_v.shape}')
-                            else:
+                            elif ds_vocab_size == hf_vocab_size:
                                 print_rank_0(
                                     f'## vocab offset requested, but not needed: ds_vocab_size = {ds_vocab_size}; hf_vocab_size = {hf_vocab_size}')
+                            else:
+                                print_rank_0(
+                                    f'## vocab offset requested, but HF is greater than HF!; ds_vocab_size = {ds_vocab_size}; hf_vocab_size = {hf_vocab_size}')
 
                         # check if value shapes match
                         if original_v.shape != hf_v.shape:
