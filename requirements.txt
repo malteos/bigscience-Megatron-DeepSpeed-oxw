@@ -8,9 +8,6 @@ six
 tensorboard
 torch>=1.7
 transformers
-DeepSpeed @ git+https://github.com/microsoft/DeepSpeed.git
-# Specific version
 DeepSpeed @ git+https://github.com/microsoft/DeepSpeed.git@3da841853ca07abf3a09e7bd325a576c4e642c11
-# versions from HF transformers
 black==21.4b0
 isort>=5.5.4
