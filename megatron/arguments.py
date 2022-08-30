@@ -377,6 +377,10 @@ def _add_network_size_args(parser):
                        ', needs to be divisible by TP size and `make-vocab-size-divisible-by`.')
     group.add_argument('--layernorm-epsilon', type=float, default=1e-5,
                        help='Layer norm epsilon.')
+    group.add_argument('--sync-tp-duplicated-parameters', action='store_true',
+                       help='Force syncing duplicated params across TP ranks in forward. '
+                       'This is a workaround for an unresolved bug leading to TP ranks '
+                       'getting out of sync with each other.')
     group.add_argument('--apply-residual-connection-post-layernorm',
                        action='store_true',
                        help='If set, use original BERT residula connection '
@@ -569,6 +573,8 @@ def _add_training_args(parser):
                        'will be performed' )
     group.add_argument('--skip-train-iteration-range', type=str, nargs='+', default=None,
                        help='Iteration ranges to skip. The values are one or more dash-separated ranges. e.g., 101-200 251-300.')
+    group.add_argument('--inference', action='store_true',
+                       help='Very basic inference mode: not allocating optim/lr - requires ZERO_STAGE=0')
     group.add_argument('--abort-on-unmet-fused-kernel-constraints', action='store_true',
                        help="If set to True, the program will abort if the constraints for loading a fused kernel aren't met")
     group.add_argument('--pp-partition-method', type=str, default=None,
@@ -899,6 +905,8 @@ def _add_data_args(parser):
                        help='Warm up mmap files.')
     group.add_argument('--num-workers', type=int, default=2,
                        help="Dataloader number of workers.")
+    group.add_argument('--valid-num-workers', type=int, default=2,
+                       help="Dataloader number of workers for validation.")
     group.add_argument('--tokenizer-type', type=str,
                        default=None,
                        choices=['BertWordPieceLowerCase',
@@ -925,6 +933,9 @@ def _add_data_args(parser):
                        'specific positions. This option tries to un-bias the loss by reweighting loss on specific '
                        'positions based on how frequently we train on that position.'
                        'This is mostly used for prefix_lm training')
+    group.add_argument("--noise-density", type=float, default=None, help="Span corruption noise density")
+    group.add_argument("--mean-noise-span-length", type=int, default=None, help="Span corruption mean noise span length")
+
 
     return parser
 

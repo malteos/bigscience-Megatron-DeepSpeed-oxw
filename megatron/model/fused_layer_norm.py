@@ -18,10 +18,17 @@
    with some changes. """
 
 import numbers
-import torch
-from torch.nn.parameter import Parameter
+
+
+from megatron import get_args
+from megatron import mpu
+from packaging import version
+from torch import nn
 from torch.nn import init
+from torch.nn.parameter import Parameter
 import importlib
+import torch
+import torch.nn.functional as F
 
 global fused_mix_prec_layer_norm_cuda
 fused_mix_prec_layer_norm_cuda = None
@@ -62,19 +69,27 @@ class FusedLayerNormAffineFunction(torch.autograd.Function):
 class MixedFusedLayerNorm(torch.nn.Module):
 
   def __init__(self, normalized_shape, eps=1e-5):
-        super(MixedFusedLayerNorm, self).__init__()
+    super(MixedFusedLayerNorm, self).__init__()
 
-        global fused_mix_prec_layer_norm_cuda
-        fused_mix_prec_layer_norm_cuda = importlib.import_module(
-          "fused_mix_prec_layer_norm_cuda")
+    global fused_mix_prec_layer_norm_cuda
+    fused_mix_prec_layer_norm_cuda = importlib.import_module(
+      "fused_mix_prec_layer_norm_cuda")
 
-        if isinstance(normalized_shape, numbers.Integral):
-            normalized_shape = (normalized_shape,)
-        self.normalized_shape = torch.Size(normalized_shape)
-        self.eps = eps
-        self.weight = Parameter(torch.Tensor(*normalized_shape))
-        self.bias = Parameter(torch.Tensor(*normalized_shape))
-        self.reset_parameters()
+    if isinstance(normalized_shape, numbers.Integral):
+        normalized_shape = (normalized_shape,)
+    self.normalized_shape = torch.Size(normalized_shape)
+    self.eps = eps
+    self.weight = Parameter(torch.Tensor(*normalized_shape))
+    self.bias = Parameter(torch.Tensor(*normalized_shape))
+    self.reset_parameters()
+
+    args = get_args()
+    self.layernorm_tp_auto_sync = args.sync_tp_duplicated_parameters
+
+    self.use_meg_ds_fused_layer_norm = (
+      args.bf16 # Current Meg-DS cuda kernel has better throughput than torch.nn.LayerNorm
+      or version.parse(torch.__version__) >= version.parse("1.11.0") # https://github.com/pytorch/pytorch/pull/66920
+    )
 
 
   def reset_parameters(self):
@@ -85,6 +100,12 @@ class MixedFusedLayerNorm(torch.nn.Module):
 
   def forward(self, input):
 
-    return FusedLayerNormAffineFunction.apply(
-      input, self.weight, self.bias, self.normalized_shape,self.eps)
+    if self.layernorm_tp_auto_sync:
+      torch.distributed.all_reduce(self.weight, op=torch.distributed.ReduceOp.AVG, group=mpu.get_tensor_model_parallel_group())
+      torch.distributed.all_reduce(self.bias, op=torch.distributed.ReduceOp.AVG, group=mpu.get_tensor_model_parallel_group())
 
+    if self.use_meg_ds_fused_layer_norm:
+        return FusedLayerNormAffineFunction.apply(
+            input, self.weight, self.bias, self.normalized_shape, self.eps)
+    else:
+        return F.layer_norm(input, self.normalized_shape, self.weight, self.bias)
